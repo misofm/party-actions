@@ -4,7 +4,7 @@
 #[test_only]
 module party_wallet::party_wallet_tests;
 
-use miso_party::party::{Self, Party, PartyAdminCap};
+use partyos::party::{Self, Party, PartyAdminCap};
 use party_wallet::party_wallet as action;
 use std::unit_test::{assert_eq, destroy};
 use sui::accumulator::AccumulatorRoot;
@@ -20,7 +20,7 @@ const RECIPIENT: address = @0xB;
 /// `accumulator::create_for_testing` is system-only.
 const SYSTEM: address = @0x0;
 
-/// Mirrors `miso_party::party::EUnauthorized`.
+/// Mirrors `partyos::party::EUnauthorized`.
 const EUnauthorized: u64 = 0;
 /// Mirrors `hikida::hikida::ENoValueToRedeem`.
 const ENoValueToRedeem: u64 = 1;
@@ -176,7 +176,7 @@ fun receives_and_merges_coins_with_event_payload() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
+#[test, expected_failure(abort_code = EUnauthorized, location = partyos::party)]
 fun receive_rejects_a_cap_for_another_party() {
     let mut scenario = ts::begin(ADMIN);
     let party_id = new_shared_party(&mut scenario, false);
@@ -387,7 +387,7 @@ fun vault_borrow_rejects_a_foreign_vault_admin_cap() {
     abort
 }
 
-#[test, expected_failure(abort_code = EUnauthorized, location = miso_party::party)]
+#[test, expected_failure(abort_code = EUnauthorized, location = partyos::party)]
 fun action_rejects_a_vault_containing_another_partys_cap() {
     let ctx = &mut tx_context::dummy();
     let (mut target_party, _target_cap) = new_party(false, ctx);
