@@ -27,7 +27,7 @@ const ENothingToReceive: u64 = 0;
 // === Events ===
 
 /// Emitted when one object is received from a Party's object inbox.
-public struct ObjectReceivedEvent has copy, drop {
+public struct ObjectReceivedEvent<phantom T> has copy, drop {
     party_id: ID,
     object_id: ID,
 }
@@ -35,6 +35,7 @@ public struct ObjectReceivedEvent has copy, drop {
 /// Emitted when coin objects are received and merged into one balance.
 public struct CoinsReceivedEvent<phantom Currency> has copy, drop {
     party_id: ID,
+    coin_ids: vector<ID>,
     amount: u64,
     coins: u64,
 }
@@ -58,7 +59,7 @@ public fun receive<T: key + store>(
 ): T {
     let party_id = object::id(party);
     let received = transfer::public_receive(party.uid_mut(admin_cap), object_to_receive);
-    emit(ObjectReceivedEvent { party_id, object_id: object::id(&received) });
+    emit(ObjectReceivedEvent<T> { party_id, object_id: object::id(&received) });
     received
 }
 
@@ -74,9 +75,10 @@ public fun receive_balance<Currency>(
 ): Balance<Currency> {
     assert!(!coins.is_empty(), ENothingToReceive);
     let party_id = object::id(party);
+    let coin_ids = coins.map_ref!(|ticket| transfer::receiving_object_id(ticket));
     let count = coins.length();
     let balance = hikida::receive_balance(party.uid_mut(admin_cap), coins);
-    emit(CoinsReceivedEvent<Currency> { party_id, amount: balance.value(), coins: count });
+    emit(CoinsReceivedEvent<Currency> { party_id, coin_ids, amount: balance.value(), coins: count });
     balance
 }
 
@@ -104,15 +106,15 @@ public fun inbox_address(party: &Party): address {
 // === Test helpers ===
 
 #[test_only]
-public fun object_received_event_fields(event: &ObjectReceivedEvent): (ID, ID) {
+public fun object_received_event_fields<T>(event: &ObjectReceivedEvent<T>): (ID, ID) {
     (event.party_id, event.object_id)
 }
 
 #[test_only]
 public fun coins_received_event_fields<Currency>(
     event: &CoinsReceivedEvent<Currency>,
-): (ID, u64, u64) {
-    (event.party_id, event.amount, event.coins)
+): (ID, vector<ID>, u64, u64) {
+    (event.party_id, event.coin_ids, event.amount, event.coins)
 }
 
 #[test_only]
@@ -121,4 +123,3 @@ public fun funds_redeemed_event_fields<Currency>(
 ): (ID, u64) {
     (event.party_id, event.amount)
 }
-

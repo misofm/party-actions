@@ -107,7 +107,7 @@ fun direct_owned_cap_receives_exact_object_and_emits_payload() {
 
         assert_eq!(object::id(&received), stake_id);
         assert_eq!(received.amount, 5_000);
-        let events = event::events_by_type<action::ObjectReceivedEvent>();
+        let events = event::events_by_type<action::ObjectReceivedEvent<StakeLike>>();
         assert_eq!(events.length(), 1);
         let (emitted_party, emitted_object) = action::object_received_event_fields(&events[0]);
         assert_eq!(emitted_party, party_id);
@@ -135,6 +135,12 @@ fun group_party_receives_an_object() {
         let coin = action::receive(&mut party, &admin_cap, ticket<Coin<SUI>>(coin_id));
         assert_eq!(coin.value(), 77);
         assert_eq!(object::id(&coin), coin_id);
+        let events = event::events_by_type<action::ObjectReceivedEvent<Coin<SUI>>>();
+        assert_eq!(events.length(), 1);
+        let (emitted_party, emitted_object) = action::object_received_event_fields(&events[0]);
+        assert_eq!(emitted_party, party_id);
+        assert_eq!(emitted_object, coin_id);
+        assert_eq!(event::events_by_type<action::ObjectReceivedEvent<StakeLike>>().length(), 0);
         coin.burn_for_testing();
         scenario.return_to_sender(admin_cap);
         ts::return_shared(party);
@@ -164,12 +170,48 @@ fun receives_and_merges_coins_with_event_payload() {
 
         let events = event::events_by_type<action::CoinsReceivedEvent<SUI>>();
         assert_eq!(events.length(), 1);
-        let (emitted_party, amount, count) = action::coins_received_event_fields(&events[0]);
+        let (emitted_party, coin_ids, amount, count) = action::coins_received_event_fields(&events[0]);
         assert_eq!(emitted_party, party_id);
+        assert_eq!(coin_ids, vector[first, second]);
         assert_eq!(amount, 1_000);
         assert_eq!(count, 2);
 
         assert_eq!(balance::destroy_for_testing(received), 1_000);
+        scenario.return_to_sender(admin_cap);
+        ts::return_shared(party);
+    };
+    scenario.end();
+}
+
+#[test]
+fun receives_zero_valued_coins_and_emits_all_input_ids() {
+    let mut scenario = ts::begin(ADMIN);
+    let party_id = new_shared_party(&mut scenario, false);
+
+    scenario.next_tx(ADMIN);
+    let first = send_coin<SUI>(&mut scenario, party_id.to_address(), 0);
+    let second = send_coin<SUI>(&mut scenario, party_id.to_address(), 0);
+
+    scenario.next_tx(ADMIN);
+    {
+        let mut party = scenario.take_shared<Party>();
+        let admin_cap = scenario.take_from_sender<PartyAdminCap>();
+        let received = action::receive_balance<SUI>(
+            &mut party,
+            &admin_cap,
+            vector[ticket<Coin<SUI>>(first), ticket<Coin<SUI>>(second)],
+        );
+        assert_eq!(received.value(), 0);
+
+        let events = event::events_by_type<action::CoinsReceivedEvent<SUI>>();
+        assert_eq!(events.length(), 1);
+        let (emitted_party, coin_ids, amount, count) = action::coins_received_event_fields(&events[0]);
+        assert_eq!(emitted_party, party_id);
+        assert_eq!(coin_ids, vector[first, second]);
+        assert_eq!(amount, 0);
+        assert_eq!(count, 2);
+
+        assert_eq!(balance::destroy_for_testing(received), 0);
         scenario.return_to_sender(admin_cap);
         ts::return_shared(party);
     };

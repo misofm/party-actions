@@ -32,8 +32,8 @@ types, witnesses, or install functions.
 
 | Event | Payload |
 |---|---|
-| `ObjectReceivedEvent` | `party_id`, `object_id` |
-| `CoinsReceivedEvent<Currency>` | `party_id`, merged `amount`, input `coins` count |
+| `ObjectReceivedEvent<T>` | `party_id`, `object_id` |
+| `CoinsReceivedEvent<Currency>` | `party_id`, input `coin_ids` in order, merged `amount`, input `coins` count |
 | `FundsRedeemedEvent<Currency>` | `party_id`, redeemed `amount` |
 
 ## Accumulator testing boundary
