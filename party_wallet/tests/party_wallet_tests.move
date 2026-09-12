@@ -22,7 +22,7 @@ const SYSTEM: address = @0x0;
 
 /// Mirrors `partyos::party::EUnauthorized`.
 const EUnauthorized: u64 = 0;
-/// Mirrors `hikida::hikida::ENoValueToRedeem`.
+/// Mirrors `party_wallet::party_wallet::ENoValueToRedeem`.
 const ENoValueToRedeem: u64 = 1;
 /// Mirrors `vault::vault::ENotVaultAdmin`.
 const ENotVaultAdmin: u64 = 0;
@@ -321,7 +321,7 @@ fun partial_redemptions_cover_every_locally_reachable_funded_path() {
     scenario.end();
 }
 
-#[test, expected_failure(abort_code = ENoValueToRedeem, location = hikida::hikida)]
+#[test, expected_failure(abort_code = ENoValueToRedeem, location = action)]
 fun zero_redemption_aborts() {
     let ctx = &mut tx_context::dummy();
     let (mut party, admin_cap) = new_party(false, ctx);

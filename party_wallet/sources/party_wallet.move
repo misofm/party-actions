@@ -23,6 +23,8 @@ use sui::transfer::Receiving;
 
 /// No coin tickets were supplied to `receive_balance`.
 const ENothingToReceive: u64 = 0;
+/// Zero-value redemption is rejected by the Party wallet Action.
+const ENoValueToRedeem: u64 = 1;
 
 // === Events ===
 
@@ -77,7 +79,7 @@ public fun receive_balance<Currency>(
     let party_id = object::id(party);
     let coin_ids = coins.map_ref!(|ticket| transfer::receiving_object_id(ticket));
     let count = coins.length();
-    let balance = hikida::receive_balance(party.uid_mut(admin_cap), coins);
+    let balance = hikida::receive_coins_as_balance(party.uid_mut(admin_cap), coins);
     emit(CoinsReceivedEvent<Currency> { party_id, coin_ids, amount: balance.value(), coins: count });
     balance
 }
@@ -85,7 +87,7 @@ public fun receive_balance<Currency>(
 /// Redeem `value` from `party`'s accumulator and return the resulting balance.
 ///
 /// Aborts if `admin_cap` belongs to another Party. Accumulator semantics remain
-/// in `hikida`: zero values abort with code `1`, and unavailable funds abort in
+/// in `hikida`: this Action rejects zero with `ENoValueToRedeem`, and unavailable funds abort in
 /// the Sui accumulator implementation.
 public fun redeem_balance<Currency>(
     party: &mut Party,
@@ -93,7 +95,9 @@ public fun redeem_balance<Currency>(
     value: u64,
 ): Balance<Currency> {
     let party_id = object::id(party);
-    let balance = hikida::redeem_balance<Currency>(party.uid_mut(admin_cap), value);
+    let uid = party.uid_mut(admin_cap);
+    assert!(value > 0, ENoValueToRedeem);
+    let balance = hikida::redeem_balance<Currency>(uid, value);
     emit(FundsRedeemedEvent<Currency> { party_id, amount: balance.value() });
     balance
 }
